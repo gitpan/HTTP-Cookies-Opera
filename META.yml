@@ -1,6 +1,6 @@
 --- #YAML:1.0
 name:               HTTP-Cookies-Opera
-version:            0.03
+version:            0.04
 abstract:           Cookie storage and management for Opera
 author:
     - gray <gray@cpan.org>
