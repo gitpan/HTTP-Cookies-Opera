@@ -6,10 +6,10 @@ use warnings;
 use parent qw(HTTP::Cookies);
 use Carp qw(croak);
 
-our $VERSION = '0.06';
+our $VERSION = '0.07';
 $VERSION = eval $VERSION;
 
-use constant DEBUG    => 0;
+use constant DEBUG    => $ENV{HTTP_COOKIES_OPERA_DEBUG} || 0;
 use constant FILE_VER => 1;
 use constant APP_VER  => 2;
 use constant TAG_LEN  => 1;
@@ -78,7 +78,8 @@ sub load {
         elsif (0x12 == $tag) {
             # Time is stored in 8 bytes for Opera >=10, 4 bytes for <10.
             $payload = unpack 8 == $len ? 'x4N' : 'N', $payload;
-            $cookie{expires} = $payload;
+            $cookie{maxage} = $payload - time;
+            DEBUG and $payload = scalar localtime $payload;
         }
         elsif (0x1a == $tag) {
             # Version- not yet seen.
@@ -96,18 +97,11 @@ sub _add_cookie {
     my ($self, $cookie) = @_;
 
     return unless exists $cookie->{key};
-    my ($domain, $path, $key) = @$cookie{qw(domain path key)};
 
     $self->set_cookie(
-        undef, $key, $cookie->{val}, $path, $domain, undef, undef,
-        $cookie->{secure}, undef, undef, undef
+        undef, @$cookie{qw(key val path domain)}, undef, undef,
+        @$cookie{qw(secure maxage)}, undef, undef
     );
-
-    # Set the expires value directly instead of letting set_cookie() do it.
-    # This avoids two redundant calls to time() and prevents a possible
-    # discrepancy between the loaded() and saved() values of the expire
-    # time.
-    $self->{COOKIES}{$domain}{$path}{$key}[5] = $cookie->{expires};
 }
 
 sub save {
@@ -211,7 +205,10 @@ sub save {
                 ) = @$aref;
 
                 next if $discard and not $self->{ignore_discard};
-                next if defined $expires and time > $expires;
+                if (defined $expires and time > $expires) {
+                    DEBUG and print "    expired cookie: $key\n";
+                    next;
+                }
 
                 DEBUG and print "    cookie: $key -> $val\n";
                 print $fh pack 'Cn', 0x3,
