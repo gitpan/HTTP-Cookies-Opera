@@ -6,10 +6,10 @@ use warnings;
 use parent qw(HTTP::Cookies);
 use Carp qw(croak);
 
-our $VERSION = '0.07';
+our $VERSION = '0.08';
 $VERSION = eval $VERSION;
 
-use constant DEBUG    => $ENV{HTTP_COOKIES_OPERA_DEBUG} || 0;
+use constant DEBUG    => !! $ENV{HTTP_COOKIES_OPERA_DEBUG};
 use constant FILE_VER => 1;
 use constant APP_VER  => 2;
 use constant TAG_LEN  => 1;
@@ -118,8 +118,7 @@ sub save {
     # components (i.e. com -> opera -> www).
     my @domains = sort { $a->[0] cmp $b->[0] } map  {
         # Do not split IP addresses into components.
-        my @parts = $_ =~ /^\d+\.\d+\.\d+\.\d+$/
-            ? ($_) : reverse split '\.', $_;
+        my @parts = /^(?:\d+\.){3}\d+$/ ? ($_) : reverse split '\.';
         [ join('.', @parts), $_, \@parts ]
     } keys %{$self->{COOKIES}};
 
@@ -252,7 +251,7 @@ can C<load()> and C<save()> Opera cookie files.
 
 L<HTTP::Cookies>
 
-L<http://waybackmachine.org/http://www.opera.com/docs/fileformats/>
+L<http://www.opera.com/docs/operafiles/#cookies>
 
 =head1 REQUESTS AND BUGS
 
@@ -295,7 +294,7 @@ L<http://search.cpan.org/dist/HTTP-Cookies-Opera/>
 
 =head1 COPYRIGHT AND LICENSE
 
-Copyright (C) 2011 gray <gray at cpan.org>, all rights reserved.
+Copyright (C) 2011-2013 gray <gray at cpan.org>, all rights reserved.
 
 This library is free software; you can redistribute it and/or modify it
 under the same terms as Perl itself.
